@@ -13,7 +13,7 @@ app = FastAPI()
 
 # Configuration
 API_TOKEN = os.getenv("API_TOKEN")
-MAX_MW_LIMIT = float(os.getenv("MAX_MW_LIMIT", 1.0))
+MAX_MW_LIMIT = float(os.getenv("MAX_MW_LIMIT", 1.1))
 
 # Security Dependency
 def verify_token(x_api_token: str = Header(...)):
