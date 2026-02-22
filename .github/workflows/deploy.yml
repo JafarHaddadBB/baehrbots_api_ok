@@ -1,0 +1,36 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy using SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd /mnt/HC_Volume_101329726/baehrbots_api_ok
+            git pull origin master
+            
+            # Activate virtual environment and install dependencies
+            if [ -d "venv" ]; then
+              source venv/bin/activate
+              pip install -r requirements.txt
+            else
+              python3 -m venv venv
+              source venv/bin/activate
+              pip install -r requirements.txt
+            fi
+            
+            # Restart your application here
+            # e.g., sudo systemctl restart myapp
+            # or pkill -f "python main.py" && nohup python main.py &
