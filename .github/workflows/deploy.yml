@@ -9,18 +9,25 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy using SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.HOST }} >> ~/.ssh/known_hosts
+          
+      - name: Deploy
+        run: |
+          ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             cd /mnt/HC_Volume_101329726/baehrbots_api_ok
             git pull origin main
             
-            # Activate virtual environment and install dependencies
             if [ -d "venv" ]; then
               source venv/bin/activate
               pip install -r requirements.txt
@@ -29,7 +36,4 @@ jobs:
               source venv/bin/activate
               pip install -r requirements.txt
             fi
-            
-            # Restart your application here
-            # e.g., sudo systemctl restart myapp
-            # or pkill -f "python main.py" && nohup python main.py &
+          EOF
