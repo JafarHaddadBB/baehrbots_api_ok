@@ -26,7 +26,10 @@ jobs:
         run: |
           ssh ${{ secrets.USERNAME }}@${{ secrets.HOST }} << 'EOF'
             cd /mnt/HC_Volume_101329726/baehrbots_api_ok
-            git pull origin main
+            
+            # FORCE update to match GitHub exactly
+            git fetch origin
+            git reset --hard origin/main
             
             if [ -d "venv" ]; then
               source venv/bin/activate
