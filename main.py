@@ -23,11 +23,9 @@ def verify_token(x_api_token: str = Header(...)):
 ##keinen string zurückgeben
 #JSONResponse change to some class
 #
-#####################################PUSH######################################    
-@app.post("/push")
-async def push_schedule(data: SchedulePush, x_api_token: str = Header(...)):##
-    verify_token(x_api_token)
 
+# Refactored logic to handle both production and simulation tables
+def process_schedule_push(data: SchedulePush, table_name: str):
     # 1. Validate Duplicate Quarters (New Check)
     seen_quarters = set()
     for q in data.Quarters:
@@ -55,7 +53,8 @@ async def push_schedule(data: SchedulePush, x_api_token: str = Header(...)):##
     try:
         # 3. Version Check (New Check)
         # We explicitly look up the current version before inserting
-        check_query = "SELECT MAX(version) FROM ok_energy_schedule WHERE datum = %s AND bilanzkreis = %s"
+        # Using f-string for table_name is safe here as it comes from trusted code arguments
+        check_query = f"SELECT MAX(version) FROM {table_name} WHERE datum = %s AND bilanzkreis = %s"
         cursor.execute(check_query, (data.Datum, data.Bilanzkreis))
         result = cursor.fetchone()
         
@@ -69,8 +68,8 @@ async def push_schedule(data: SchedulePush, x_api_token: str = Header(...)):##
              )
 
         # 4. Insert Data
-        insert_query = """
-            INSERT INTO ok_energy_schedule (datum, bilanzkreis, quarter, quantity, version)
+        insert_query = f"""
+            INSERT INTO {table_name} (datum, bilanzkreis, quarter, quantity, version)
             VALUES (%s, %s, %s, %s, %s)
             ON DUPLICATE KEY UPDATE 
                 quantity = VALUES(quantity),
@@ -85,7 +84,7 @@ async def push_schedule(data: SchedulePush, x_api_token: str = Header(...)):##
         cursor.executemany(insert_query, batch_values)
         conn.commit()
         
-        return {"status": "success", "message": f"Processed {len(batch_values)} quarters"}
+        return {"status": "success", "message": f"Processed {len(batch_values)} quarters", "environment": table_name}
 
     except HTTPException as he:
         # Re-raise HTTP exceptions (like the version conflict)
@@ -98,6 +97,17 @@ async def push_schedule(data: SchedulePush, x_api_token: str = Header(...)):##
     finally:
         cursor.close()
         conn.close()
+
+#####################################PUSH######################################    
+@app.post("/push")
+async def push_schedule(data: SchedulePush, x_api_token: str = Header(...)):
+    verify_token(x_api_token)
+    return process_schedule_push(data, "ok_energy_schedule")
+
+@app.post("/simulation/push")
+async def push_simulation_schedule(data: SchedulePush, x_api_token: str = Header(...)):
+    verify_token(x_api_token)
+    return process_schedule_push(data, "ok_energy_schedule_simulation")
         
 #####################################PULL######################################
 @app.get("/pull")
