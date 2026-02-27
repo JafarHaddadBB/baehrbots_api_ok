@@ -132,7 +132,7 @@ async def pull_trades(
             SELECT `B/S`, `LCtrct`, `Qty`, `Prc`, `Text`, `TradeID`, `Area`
             FROM trades
             WHERE 
-                `Text` LIKE '%oke%'
+                LOWER(`Text`) LIKE 'oke%'
                 AND LEFT(`LCtrct`, 8) >= %s 
                 AND LEFT(`LCtrct`, 8) <= %s
         """
